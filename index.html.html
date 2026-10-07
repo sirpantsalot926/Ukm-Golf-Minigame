@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UKM Lapang Sasar Golf - TikTok Mini Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #111;
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 480px;
+      max-height: 854px;
+      aspect-ratio: 9 / 16;
+      background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      overflow: hidden;
+    }
+    /* Header Bar */
+    header {
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      color: #fff;
+      border-bottom: 2px solid rgba(255,255,255,0.1);
+    }
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-badge img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    }
+    .logo-text {
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: #ffd700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stats-group {
+      display: flex;
+      gap: 12px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.15);
+      padding: 4px 10px;
+      border-radius: 12px;
+      text-align: center;
+      min-width: 60px;
+    }
+    .stat-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      opacity: 0.8;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-size: 15px;
+      font-weight: 900;
+      color: #fff;
+    }
+    /* Canvas Viewport */
+    #canvas-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      background: #2e7d32;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* Controls Area */
+    #controls {
+      padding: 12px 16px 20px;
+      background: rgba(15, 23, 42, 0.95);
+      border-top: 2px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+    /* Mode Toggle & Aim Controls */
+    .controls-top-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 12px;
+      color: #fff;
+      background: #334155;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .toggle-btn.active {
+      background: #0284c7;
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.5);
+    }
+    .aim-slider-container {
+      flex: 2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+    .aim-slider-container span {
+      color: #aaa;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    input[type=range] {
+      flex: 1;
+      accent-color: #0284c7;
+      height: 6px;
+      cursor: pointer;
+    }
+    /* Meter */
+    .meter-wrapper {
+      position: relative;
+      width: 100%;
+      height: 24px;
+      background: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+    .meter-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #22c55e 0%, #eab308 70%, #ef4444 100%);
+      transition: width 0.03s linear;
+    }
+    .meter-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 12px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+    /* Shoot Button */
+    .shoot-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(234, 88, 12, 0.4);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .shoot-btn:active, .shoot-btn.holding {
+      transform: scale(0.97);
+      background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+      box-shadow: 0 2px 10px rgba(234, 88, 12, 0.6);
+    }
+    /* Floating Re-center Button */
+    .recenter-btn {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    /* Modal / Overlay */
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      padding: 24px;
+      text-align: center;
+      color: #fff;
+    }
+    .overlay.hidden { display: none; }
+    .overlay h1 {
+      font-size: 32px;
+      color: #ffd700;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(255,215,0,0.5);
+    }
+    .overlay p {
+      font-size: 16px;
+      margin-bottom: 24px;
+      color: #cbd5e1;
+    }
+    .overlay-btn {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  <!-- Header Bar -->
+  <header>
+    <div class="logo-badge">
+      <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ffd700' stroke='%23ffffff' stroke-width='4'/><text x='50' y='55' font-size='22' font-weight='900' fill='%23111111' text-anchor='middle'>UKM</text></svg>" alt="UKM Logo">
+      <div class="logo-text">UKM Lapang<br>Sasar Golf</div>
+    </div>
+    <div class="stats-group">
+      <div class="stat-box">
+        <div class="stat-label">Hole</div>
+        <div class="stat-value" id="hole-val">1/10</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Par</div>
+        <div class="stat-value" id="par-val">3</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Strokes</div>
+        <div class="stat-value" id="strokes-val">0</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Canvas Viewport -->
+  <div id="canvas-container">
+    <canvas id="gameCanvas"></canvas>
+    <button class="recenter-btn" id="recenterBtn">🎯 Center Ball</button>
+  </div>
+
+  <!-- Controls Area -->
+  <div id="controls">
+    <div class="controls-top-row">
+      <button class="toggle-btn active" id="modeBtn">🎯 AIM MODE</button>
+      <div class="aim-slider-container">
+        <span>ANGLE</span>
+        <input type="range" id="angleSlider" min="-180" max="180" value="0">
+      </div>
+    </div>
+
+    <div class="meter-wrapper">
+      <div class="meter-bar" id="meterBar"></div>
+      <div class="meter-text" id="meterText">0% POWER</div>
+    </div>
+
+    <button class="shoot-btn" id="shootBtn">HOLD TO SHOOT</button>
+  </div>
+
+  <!-- Modal / Finish Screen -->
+  <div class="overlay hidden" id="gameOverModal">
+    <h1 id="modalTitle">CHAMPION!</h1>
+    <p id="modalDesc">You completed all 10 holes!</p>
+    <button class="overlay-btn" id="restartBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const holeVal = document.getElementById('hole-val');
+  const parVal = document.getElementById('par-val');
+  const strokesVal = document.getElementById('strokes-val');
+  const meterBar = document.getElementById('meterBar');
+  const meterText = document.getElementById('meterText');
+  const shootBtn = document.getElementById('shootBtn');
+  const modeBtn = document.getElementById('modeBtn');
+  const angleSlider = document.getElementById('angleSlider');
+  const recenterBtn = document.getElementById('recenterBtn');
+  const gameOverModal = document.getElementById('gameOverModal');
+  const restartBtn = document.getElementById('restartBtn');
+
+  let audioCtx = null;
+  function playSound(type) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'hit') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      } else if (type === 'hole') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.25);
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      }
+    } catch(e){}
+  }
+
+  // Cross-browser rounded rectangle
+  function drawRoundedRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  const levels = [
+    { par: 3, ball: {x: 200, y: 650}, hole: {x: 200, y: 150}, hazards: [] },
+    { par: 3, ball: {x: 200, y: 650}, hole: {x: 200, y: 150}, hazards: [{type: 'sand', x: 140, y: 380, w: 120, h: 80}] },
+    { par: 3, ball: {x: 200, y: 650}, hole: {x: 200, y: 150}, hazards: [{type: 'sand', x: 100, y: 400, w: 90, h: 70}, {type: 'sand', x: 210, y: 300, w: 90, h: 70}] },
+    { par: 4, ball: {x: 200, y: 700}, hole: {x: 200, y: 120}, hazards: [{type: 'water', x: 80, y: 420, w: 240, h: 60}] },
+    { par: 4, ball: {x: 100, y: 700}, hole: {x: 300, y: 150}, hazards: [{type: 'sand', x: 180, y: 400, w: 120, h: 100}] },
+    { par: 4, ball: {x: 200, y: 720}, hole: {x: 200, y: 120}, hazards: [{type: 'water', x: 50, y: 450, w: 180, h: 70}, {type: 'sand', x: 200, y: 300, w: 120, h: 80}] },
+    { par: 4, ball: {x: 200, y: 720}, hole: {x: 320, y: 120}, hazards: [{type: 'sand', x: 80, y: 500, w: 140, h: 80}, {type: 'water', x: 180, y: 300, w: 160, h: 80}] },
+    { par: 5, ball: {x: 80, y: 720}, hole: {x: 320, y: 120}, hazards: [{type: 'water', x: 140, y: 500, w: 200, h: 70}, {type: 'sand', x: 50, y: 300, w: 180, h: 80}] },
+    { par: 5, ball: {x: 200, y: 750}, hole: {x: 200, y: 100}, hazards: [{type: 'sand', x: 60, y: 550, w: 120, h: 80}, {type: 'water', x: 120, y: 380, w: 200, h: 70}, {type: 'sand', x: 220, y: 220, w: 120, h: 80}] },
+    { par: 5, ball: {x: 200, y: 750}, hole: {x: 200, y: 90}, hazards: [{type: 'water', x: 40, y: 520, w: 320, h: 70}, {type: 'sand', x: 80, y: 320, w: 110, h: 80}, {type: 'sand', x: 210, y: 320, w: 110, h: 80}] }
+  ];
+
+  let currentLevelIdx = 0;
+  let strokes = 0;
+  let ball = { x: 0, y: 0, vx: 0, vy: 0, radius: 8 };
+  let hole = { x: 0, y: 0, radius: 14 };
+  let aimAngle = -Math.PI / 2;
+  let cameraOffsetY = 0;
+  let targetCameraOffsetY = 0;
+  let isAimMode = true;
+  let isHolding = false;
+  let power = 0;
+  let powerDirection = 1;
+  let isMoving = false;
+
+  let isDragging = false;
+  let lastTouchY = 0;
+
+  function initLevel(idx) {
+    currentLevelIdx = idx;
+    const lvl = levels[idx];
+    strokes = 0;
+    ball.x = lvl.ball.x;
+    ball.y = lvl.ball.y;
+    ball.vx = 0;
+    ball.vy = 0;
+    hole.x = lvl.hole.x;
+    hole.y = lvl.hole.y;
+
+    const dx = hole.x - ball.x;
+    const dy = hole.y - ball.y;
+    aimAngle = Math.atan2(dy, dx);
+    angleSlider.value = Math.round((aimAngle * 180) / Math.PI);
+
+    holeVal.textContent = `${idx + 1}/10`;
+    parVal.textContent = lvl.par;
+    strokesVal.textContent = strokes;
+
+    centerCameraOnBall();
+  }
+
+  function centerCameraOnBall() {
+    targetCameraOffsetY = canvas.height / 2 - ball.y;
+  }
+
+  function resizeCanvas() {
+    const container = document.getElementById('canvas-container');
+    canvas.width = container.clientWidth || 360;
+    canvas.height = container.clientHeight || 500;
+    centerCameraOnBall();
+  }
+
+  modeBtn.addEventListener('click', () => {
+    isAimMode = !isAimMode;
+    if (isAimMode) {
+      modeBtn.textContent = '🎯 AIM MODE';
+      modeBtn.classList.add('active');
+    } else {
+      modeBtn.textContent = '🔍 PAN MODE';
+      modeBtn.classList.remove('active');
+    }
+  });
+
+  angleSlider.addEventListener('input', (e) => {
+    aimAngle = (parseFloat(e.target.value) * Math.PI) / 180;
+  });
+
+  recenterBtn.addEventListener('click', centerCameraOnBall);
+
+  canvas.addEventListener('pointerdown', (e) => {
+    isDragging = true;
+    lastTouchY = e.clientY;
+    handlePointerAim(e);
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    if (isAimMode) {
+      handlePointerAim(e);
+    } else {
+      const deltaY = e.clientY - lastTouchY;
+      targetCameraOffsetY += deltaY;
+      lastTouchY = e.clientY;
+    }
+  });
+
+  window.addEventListener('pointerup', () => { isDragging = false; });
+
+  function handlePointerAim(e) {
+    if (!isAimMode || isMoving) return;
+    const rect = canvas.getBoundingClientRect();
+    const touchX = e.clientX - rect.left;
+    const touchY = e.clientY - rect.top - cameraOffsetY;
+
+    const dx = touchX - ball.x;
+    const dy = touchY - ball.y;
+    aimAngle = Math.atan2(dy, dx);
+    angleSlider.value = Math.round((aimAngle * 180) / Math.PI);
+  }
+
+  shootBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (isMoving) return;
+    isHolding = true;
+    power = 0;
+    powerDirection = 1;
+    shootBtn.classList.add('holding');
+    centerCameraOnBall();
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (isHolding) {
+      isHolding = false;
+      shootBtn.classList.remove('holding');
+      executeShot();
+    }
+  });
+
+  function executeShot() {
+    if (power <= 0) return;
+    strokes++;
+    strokesVal.textContent = strokes;
+    playSound('hit');
+
+    const shotForce = (power / 100) * 18;
+    ball.vx = Math.cos(aimAngle) * shotForce;
+    ball.vy = Math.sin(aimAngle) * shotForce;
+    isMoving = true;
+    power = 0;
+    updateMeterUI();
+  }
+
+  function updateMeterUI() {
+    meterBar.style.width = `${power}%`;
+    meterText.textContent = `${Math.round(power)}% POWER`;
+  }
+
+  function update() {
+    if (isHolding) {
+      power += powerDirection * 2.5;
+      if (power >= 100) { power = 100; powerDirection = -1; }
+      if (power <= 0) { power = 0; powerDirection = 1; }
+      updateMeterUI();
+    }
+
+    cameraOffsetY += (targetCameraOffsetY - cameraOffsetY) * 0.1;
+
+    if (isMoving) {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      let friction = 0.98;
+
+      const lvl = levels[currentLevelIdx];
+      for (let h of lvl.hazards) {
+        if (ball.x > h.x && ball.x < h.x + h.w && ball.y > h.y && ball.y < h.y + h.h) {
+          if (h.type === 'sand') {
+            friction = 0.85;
+          } else if (h.type === 'water') {
+            isMoving = false;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.x = lvl.ball.x;
+            ball.y = lvl.ball.y;
+            centerCameraOnBall();
+            return;
+          }
+        }
+      }
+
+      ball.vx *= friction;
+      ball.vy *= friction;
+
+      if (Math.hypot(ball.vx, ball.vy) < 0.15) {
+        ball.vx = 0;
+        ball.vy = 0;
+        isMoving = false;
+      }
+
+      const distToHole = Math.hypot(ball.x - hole.x, ball.y - hole.y);
+      if (distToHole < hole.radius) {
+        isMoving = false;
+        ball.x = hole.x;
+        ball.y = hole.y;
+        playSound('hole');
+        setTimeout(nextLevel, 1000);
+      }
+
+      centerCameraOnBall();
+    }
+
+    render();
+    requestAnimationFrame(update);
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(0, cameraOffsetY);
+
+    // Fairway
+    ctx.fillStyle = '#388e3c';
+    ctx.fillRect(40, -200, canvas.width - 80, 2000);
+
+    // Hazards
+    const lvl = levels[currentLevelIdx];
+    for (let h of lvl.hazards) {
+      ctx.fillStyle = (h.type === 'sand') ? '#e0c068' : '#0284c7';
+      drawRoundedRect(h.x, h.y, h.w, h.h, 16);
+    }
+
+    // Hole
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(hole.x, hole.y, hole.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Flag
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(hole.x, hole.y);
+    ctx.lineTo(hole.x, hole.y - 40);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(hole.x, hole.y - 40);
+    ctx.lineTo(hole.x + 20, hole.y - 30);
+    ctx.lineTo(hole.x, hole.y - 20);
+    ctx.fill();
+
+    // Aim Guide
+    if (!isMoving) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(ball.x, ball.y);
+      ctx.lineTo(ball.x + Math.cos(aimAngle) * 120, ball.y + Math.sin(aimAngle) * 120);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Ball
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function nextLevel() {
+    if (currentLevelIdx + 1 < levels.length) {
+      initLevel(currentLevelIdx + 1);
+    } else {
+      gameOverModal.classList.remove('hidden');
+    }
+  }
+
+  restartBtn.addEventListener('click', () => {
+    gameOverModal.classList.add('hidden');
+    initLevel(0);
+  });
+
+  window.onload = () => {
+    resizeCanvas();
+    initLevel(0);
+    requestAnimationFrame(update);
+  };
+</script>
+</body>
+</html>
