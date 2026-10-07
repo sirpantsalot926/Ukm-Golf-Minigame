@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UKM Lapang Sasar Golf - 10 Level Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #030712;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        .font-game {
+            font-family: 'Fredoka', sans-serif;
+        }
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            max-width: 440px;
+            max-height: 900px;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95);
+        }
+        @media (min-width: 640px) {
+            .game-container {
+                height: 94vh;
+                border-radius: 32px;
+                overflow: hidden;
+                border: 4px solid #1e293b;
+            }
+        }
+        .btn-hold {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            box-shadow: 0 8px 0 #065f46, 0 15px 20px rgba(0,0,0,0.4);
+            transition: transform 0.05s ease, box-shadow 0.05s ease, background 0.1s ease;
+        }
+        .btn-hold:active, .btn-hold.active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #065f46, 0 8px 10px rgba(0,0,0,0.4);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .shake {
+            animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-3px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+        .popup-anim {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .max-power-glow {
+            animation: glowPulse 0.18s infinite alternate;
+            box-shadow: 0 0 22px #f59e0b, inset 0 0 12px #fef08a;
+        }
+        @keyframes glowPulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.02); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-slate-950 select-none">
+
+    <div id="appContainer" class="game-container flex flex-col justify-between bg-slate-900 relative">
+        <!-- Confetti Overlay Canvas -->
+        <canvas id="confettiCanvas" class="absolute inset-0 pointer-events-none z-40 w-full h-full"></canvas>
+
+        <!-- Top Header & HUD Bar -->
+        <div class="absolute top-0 left-0 right-0 z-30 p-3.5 flex flex-col gap-2 glass-panel rounded-b-2xl shadow-xl">
+            <!-- Branding Header -->
+            <div class="flex justify-between items-center border-b border-slate-700/80 pb-2">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-400/50 flex items-center justify-center font-black text-amber-400 text-xs font-game">
+                        UKM
+                    </div>
+                    <div>
+                        <div class="text-xs font-black text-amber-400 tracking-wider font-game leading-none">LAPANG SASAR GOLF</div>
+                        <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Universiti Kebangsaan Malaysia</div>
+                    </div>
+                </div>
+                <div class="bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-3 py-1 rounded-full font-bold text-xs uppercase tracking-wider flex items-center gap-1">
+                    <span>HOLE</span> <span id="hudHoleNum" class="text-sm text-white font-game">1</span><span class="text-slate-400">/10</span>
+                </div>
+            </div>
+
+            <!-- Gameplay Metrics -->
+            <div class="flex justify-between items-center text-xs font-bold px-1">
+                <div class="bg-slate-800/90 border border-slate-700 px-3 py-1 rounded-full text-slate-300 flex items-center gap-1">
+                    PAR <span id="hudPar" class="text-amber-400 font-extrabold font-game">3</span>
+                </div>
+                <div class="text-slate-300">
+                    STROKES: <span id="hudStrokes" class="text-white font-game text-base ml-0.5">0</span>
+                </div>
+                <div class="text-slate-300">
+                    TOTAL: <span id="hudTotal" class="text-emerald-400 font-game text-base ml-0.5">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Golf Viewport -->
+        <div class="relative w-full h-full flex-1 overflow-hidden">
+            <canvas id="gameCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+            <!-- Feedback Dynamic Text Popup -->
+            <div id="feedbackBanner" class="hidden absolute top-32 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none">
+                <div id="feedbackText" class="font-game text-3xl font-black text-amber-300 drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] tracking-wider uppercase popup-anim text-center whitespace-nowrap">
+                    PERFECT!
+                </div>
+            </div>
+
+            <!-- Touch / Aim Hint Banner -->
+            <div id="aimHint" class="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-20 bg-slate-900/90 border border-slate-700/80 text-slate-200 text-xs px-3.5 py-1.5 rounded-full backdrop-blur-md pointer-events-none flex items-center gap-1.5 shadow-xl animate-bounce">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                <span>Drag to Aim • HOLD Button to Shoot</span>
+            </div>
+        </div>
+
+        <!-- Controls & Power Bar Panel -->
+        <div class="relative z-20 p-4 glass-panel rounded-t-3xl flex flex-col items-center gap-2.5">
+            <div class="w-full flex justify-between items-center text-xs font-bold px-1">
+                <div class="text-slate-400 uppercase tracking-wider">POWER CONTROL</div>
+                <div id="powerStatus" class="text-amber-400 font-game uppercase tracking-wide text-sm font-extrabold transition-all duration-75">
+                    0% POWER
+                </div>
+            </div>
+
+            <!-- Precision Oscillating Power Meter (0% -> 100% -> 0%) -->
+            <div id="powerMeterTrack" class="w-full h-7 bg-slate-950 rounded-full border-2 border-slate-700/80 p-1 relative overflow-hidden flex items-center transition-all">
+                <div class="absolute inset-1 rounded-full overflow-hidden flex opacity-30">
+                    <div class="w-[50%] h-full bg-emerald-500"></div>
+                    <div class="w-[30%] h-full bg-amber-500"></div>
+                    <div class="w-[20%] h-full bg-red-500"></div>
+                </div>
+                <div id="powerBarFill" class="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-red-500 rounded-full w-0 relative z-10 transition-all duration-75"></div>
+            </div>
+
+            <!-- Large Touch Trigger HOLD Button -->
+            <button id="shootBtn" class="btn-hold w-full py-4 rounded-2xl text-white font-game font-black text-xl tracking-wider uppercase border border-emerald-300/30 active:scale-95 transition-transform flex items-center justify-center gap-2 select-none cursor-pointer">
+                <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <span>HOLD TO SHOOT</span>
+            </button>
+        </div>
+
+        <!-- Hole Complete Modal Overlay -->
+        <div id="holeCompleteOverlay" class="hidden absolute inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+            <div class="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 w-full max-w-xs shadow-2xl flex flex-col items-center popup-anim">
+                <div id="holeRatingBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase mb-2">
+                    HOLE 1 COMPLETE
+                </div>
+                <h2 id="holeRatingText" class="font-game text-4xl font-black text-amber-300 mb-1 drop-shadow-md">
+                    BIRDIE!
+                </h2>
+                <div class="text-slate-400 text-sm mb-5">
+                    Strokes: <span id="overlayHoleStrokes" class="text-white font-bold">2</span> (Par <span id="overlayHolePar">3</span>)
+                </div>
+
+                <button id="nextHoleBtn" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl font-game font-bold text-lg text-white shadow-lg active:scale-95 transition">
+                    NEXT HOLE →
+                </button>
+            </div>
+        </div>
+
+        <!-- Final Champion Scorecard Overlay -->
+        <div id="endGameOverlay" class="hidden absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-lg flex flex-col items-center justify-center p-6 text-center">
+            <div class="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 w-full max-w-xs shadow-2xl flex flex-col items-center popup-anim">
+                <div class="w-14 h-14 rounded-full bg-amber-500/20 border-2 border-amber-400 text-amber-400 font-black font-game text-xl flex items-center justify-center mb-2">
+                    UKM
+                </div>
+                <div class="text-amber-400 text-2xl font-black font-game mb-0.5 tracking-wide">
+                    LAPANG SASAR GOLF
+                </div>
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-4">10-Hole Tournament Final</div>
+
+                <div id="finalRankBadge" class="w-20 h-20 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 text-slate-950 font-game font-black text-5xl flex items-center justify-center shadow-lg mb-4 border-4 border-yellow-200">
+                    S
+                </div>
+
+                <div class="w-full bg-slate-950/80 rounded-2xl p-4 border border-slate-800 mb-5 space-y-2 text-xs">
+                    <div class="flex justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">Total Strokes:</span>
+                        <span id="finalTotalStrokes" class="font-bold text-white font-game text-sm">28</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Score vs Par:</span>
+                        <span id="finalScoreDiff" class="font-bold text-emerald-400 font-game text-sm">-5 Under Par</span>
+                    </div>
+                </div>
+
+                <button id="restartGameBtn" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-2xl font-game font-black text-xl text-white shadow-xl active:scale-95 transition flex items-center justify-center gap-2">
+                    <span>PLAY AGAIN</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playHit(power) {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180 + power * 280, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+
+                gain.gain.setValueAtTime(0.7, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.16);
+            }
+
+            playHoleDrop() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(380, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.2);
+
+                gain.gain.setValueAtTime(0.85, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.21);
+            }
+
+            playSplash() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+
+                gain.gain.setValueAtTime(0.6, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.31);
+            }
+
+            playWhir(pitch) {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150 + pitch * 3, now);
+                gain.gain.setValueAtTime(0.02, now);
+                gain.gain.linearRampToValueAtTime(0.001, now + 0.04);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.04);
+            }
+        }
+
+        const audio = new AudioEngine();
+
+        const HOLES = [
+            // Level 1: Straight clear fairway
+            {
+                number: 1, par: 3,
+                start: { x: 200, y: 720 }, hole: { x: 200, y: 160 },
+                fairways: [{ x: 110, y: 100, width: 180, height: 680, radius: 30 }],
+                greens: [{ x: 200, y: 160, radius: 65 }],
+                bunkers: [], water: [], trees: [{ x: 60, y: 350, r: 25 }, { x: 340, y: 350, r: 25 }]
+            },
+            // Level 2: Slight right angle with sand bunker
+            {
+                number: 2, par: 3,
+                start: { x: 120, y: 720 }, hole: { x: 280, y: 180 },
+                fairways: [
+                    { x: 70, y: 400, width: 120, height: 380, radius: 25 },
+                    { x: 70, y: 120, width: 250, height: 320, radius: 30 }
+                ],
+                greens: [{ x: 280, y: 180, radius: 60 }],
+                bunkers: [{ x: 280, y: 320, radius: 32 }],
+                water: [], trees: [{ x: 230, y: 550, r: 30 }]
+            },
+            // Level 3: Water hazard across fairway
+            {
+                number: 3, par: 3,
+                start: { x: 200, y: 740 }, hole: { x: 200, y: 150 },
+                fairways: [
+                    { x: 110, y: 520, width: 180, height: 260, radius: 25 },
+                    { x: 110, y: 100, width: 180, height: 280, radius: 25 }
+                ],
+                greens: [{ x: 200, y: 150, radius: 60 }],
+                bunkers: [], water: [{ x: 40, y: 400, width: 320, height: 100, radius: 15 }],
+                trees: [{ x: 50, y: 220, r: 25 }, { x: 350, y: 220, r: 25 }]
+            },
+            // Level 4: Twin bunkers & narrow green
+            {
+                number: 4, par: 4,
+                start: { x: 200, y: 750 }, hole: { x: 200, y: 150 },
+                fairways: [{ x: 100, y: 100, width: 200, height: 700, radius: 30 }],
+                greens: [{ x: 200, y: 150, radius: 50 }],
+                bunkers: [{ x: 125, y: 150, radius: 28 }, { x: 275, y: 150, radius: 28 }, { x: 200, y: 450, radius: 35 }],
+                water: [], trees: [{ x: 50, y: 300, r: 25 }, { x: 350, y: 300, r: 25 }]
+            },
+            // Level 5: Water wrap around hole
+            {
+                number: 5, par: 4,
+                start: { x: 200, y: 760 }, hole: { x: 200, y: 140 },
+                fairways: [
+                    { x: 110, y: 560, width: 180, height: 240, radius: 25 },
+                    { x: 110, y: 90, width: 180, height: 250, radius: 25 }
+                ],
+                greens: [{ x: 200, y: 140, radius: 55 }],
+                bunkers: [{ x: 200, y: 250, radius: 25 }],
+                water: [{ x: 30, y: 50, width: 340, height: 220, radius: 20 }],
+                trees: [{ x: 60, y: 650, r: 25 }, { x: 340, y: 650, r: 25 }]
+            },
+            // Level 6: Island green surrounded by water
+            {
+                number: 6, par: 3,
+                start: { x: 200, y: 740 }, hole: { x: 200, y: 180 },
+                fairways: [{ x: 130, y: 620, width: 140, height: 160, radius: 20 }],
+                greens: [{ x: 200, y: 180, radius: 65 }],
+                bunkers: [],
+                water: [{ x: 20, y: 80, width: 360, height: 500, radius: 30 }],
+                trees: []
+            },
+            // Level 7: Slalom sand trap obstacles
+            {
+                number: 7, par: 4,
+                start: { x: 200, y: 760 }, hole: { x: 200, y: 140 },
+                fairways: [{ x: 90, y: 100, width: 220, height: 700, radius: 30 }],
+                greens: [{ x: 200, y: 140, radius: 55 }],
+                bunkers: [
+                    { x: 140, y: 580, radius: 35 },
+                    { x: 260, y: 420, radius: 35 },
+                    { x: 140, y: 260, radius: 35 }
+                ],
+                water: [], trees: [{ x: 50, y: 400, r: 30 }, { x: 350, y: 400, r: 30 }]
+            },
+            // Level 8: Long distance with mixed sand & water hazards
+            {
+                number: 8, par: 5,
+                start: { x: 200, y: 770 }, hole: { x: 200, y: 120 },
+                fairways: [
+                    { x: 100, y: 520, width: 200, height: 270, radius: 25 },
+                    { x: 100, y: 80, width: 200, height: 320, radius: 25 }
+                ],
+                greens: [{ x: 200, y: 120, radius: 50 }],
+                bunkers: [{ x: 130, y: 200, radius: 25 }, { x: 270, y: 200, radius: 25 }],
+                water: [{ x: 40, y: 410, width: 320, height: 90, radius: 15 }],
+                trees: [{ x: 50, y: 650, r: 25 }]
+            },
+            // Level 9: Tight gap shot between water hazards
+            {
+                number: 9, par: 4,
+                start: { x: 200, y: 760 }, hole: { x: 200, y: 140 },
+                fairways: [{ x: 120, y: 100, width: 160, height: 700, radius: 25 }],
+                greens: [{ x: 200, y: 140, radius: 55 }],
+                bunkers: [{ x: 200, y: 260, radius: 25 }],
+                water: [
+                    { x: 10, y: 350, width: 150, height: 200, radius: 15 },
+                    { x: 240, y: 350, width: 150, height: 200, radius: 15 }
+                ],
+                trees: []
+            },
+            // Level 10: "The Ultimate Challenge" - intricate layout
+            {
+                number: 10, par: 5,
+                start: { x: 200, y: 770 }, hole: { x: 200, y: 110 },
+                fairways: [
+                    { x: 130, y: 600, width: 140, height: 200, radius: 20 },
+                    { x: 60, y: 340, width: 280, height: 200, radius: 25 },
+                    { x: 110, y: 80, width: 180, height: 220, radius: 25 }
+                ],
+                greens: [{ x: 200, y: 110, radius: 45 }],
+                bunkers: [
+                    { x: 130, y: 440, radius: 30 }, { x: 270, y: 440, radius: 30 },
+                    { x: 200, y: 210, radius: 25 }
+                ],
+                water: [
+                    { x: 0, y: 550, width: 125, height: 100, radius: 10 },
+                    { x: 275, y: 550, width: 125, height: 100, radius: 10 },
+                    { x: 20, y: 220, width: 80, height: 100, radius: 10 },
+                    { x: 300, y: 220, width: 80, height: 100, radius: 10 }
+                ],
+                trees: [{ x: 200, y: 340, r: 25 }]
+            }
+        ];
+    </script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // UI Handles
+        const shootBtn = document.getElementById('shootBtn');
+        const powerMeterTrack = document.getElementById('powerMeterTrack');
+        const powerBarFill = document.getElementById('powerBarFill');
+        const powerStatus = document.getElementById('powerStatus');
+        const hudHoleNum = document.getElementById('hudHoleNum');
+        const hudPar = document.getElementById('hudPar');
+        const hudStrokes = document.getElementById('hudStrokes');
+        const hudTotal = document.getElementById('hudTotal');
+        const feedbackBanner = document.getElementById('feedbackBanner');
+        const feedbackText = document.getElementById('feedbackText');
+        const holeCompleteOverlay = document.getElementById('holeCompleteOverlay');
+        const holeRatingText = document.getElementById('holeRatingText');
+        const holeRatingBadge = document.getElementById('holeRatingBadge');
+        const overlayHoleStrokes = document.getElementById('overlayHoleStrokes');
+        const overlayHolePar = document.getElementById('overlayHolePar');
+        const nextHoleBtn = document.getElementById('nextHoleBtn');
+        const endGameOverlay = document.getElementById('endGameOverlay');
+        const finalRankBadge = document.getElementById('finalRankBadge');
+        const finalTotalStrokes = document.getElementById('finalTotalStrokes');
+        const finalScoreDiff = document.getElementById('finalScoreDiff');
+        const restartGameBtn = document.getElementById('restartGameBtn');
+        const appContainer = document.getElementById('appContainer');
+
+        // Confetti Engine
+        const confettiCanvas = document.getElementById('confettiCanvas');
+        const cCtx = confettiCanvas.getContext('2d');
+        let confettiParticles = [];
+
+        // Game State Variables
+        let currentHoleIndex = 0;
+        let totalStrokes = 0;
+        let holeStrokes = 0;
+        let cameraY = 0;
+
+        let ball = {
+            x: 0, y: 0, vx: 0, vy: 0, radius: 7,
+            isMoving: false, inHole: false, sinking: false, scale: 1, trail: []
+        };
+
+        let aimAngle = -Math.PI / 2;
+        let isAimDragging = false;
+        let dragStartPos = { x: 0, y: 0 };
+
+        // Power System State (Smooth 0% -> 100% -> 0% Oscillation)
+        let isHolding = false;
+        let powerVal = 0;
+        let powerDirection = 1;
+        let maxHoldPauseTimer = 0;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            confettiCanvas.width = rect.width;
+            confettiCanvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function loadHole(index) {
+            const holeData = HOLES[index];
+            currentHoleIndex = index;
+            holeStrokes = 0;
+
+            ball.x = holeData.start.x;
+            ball.y = holeData.start.y;
+            ball.vx = 0; ball.vy = 0;
+            ball.isMoving = false; ball.inHole = false; ball.sinking = false;
+            ball.scale = 1; ball.trail = [];
+
+            const dx = holeData.hole.x - ball.x;
+            const dy = holeData.hole.y - ball.y;
+            aimAngle = Math.atan2(dy, dx);
+
+            cameraY = ball.y - canvas.height * 0.65;
+
+            hudHoleNum.textContent = holeData.number;
+            hudPar.textContent = holeData.par;
+            hudStrokes.textContent = holeStrokes;
+            hudTotal.textContent = totalStrokes;
+
+            holeCompleteOverlay.classList.add('hidden');
+            endGameOverlay.classList.add('hidden');
+            resetPowerMeter();
+        }
+
+        function resetPowerMeter() {
+            powerVal = 0;
+            powerDirection = 1;
+            maxHoldPauseTimer = 0;
+            powerBarFill.style.width = '0%';
+            powerStatus.textContent = '0% POWER';
+            powerStatus.className = 'text-amber-400 font-game uppercase tracking-wide text-sm font-extrabold transition-all duration-75';
+            powerMeterTrack.classList.remove('max-power-glow');
+        }
+
+        function startHolding(e) {
+            if (e) e.preventDefault();
+            if (ball.isMoving || ball.inHole) return;
+            isHolding = true;
+            shootBtn.classList.add('active');
+            audio.init();
+        }
+
+        function stopHolding(e) {
+            if (e) e.preventDefault();
+            if (!isHolding) return;
+            isHolding = false;
+            shootBtn.classList.remove('active');
+            executeShot();
+        }
+
+        // Aiming Control
+        canvas.addEventListener('pointerdown', (e) => {
+            if (ball.isMoving || ball.inHole) return;
+            const rect = canvas.getBoundingClientRect();
+            dragStartPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            isAimDragging = true;
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isAimDragging || ball.isMoving) return;
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+
+            const dx = currentX - dragStartPos.x;
+            if (Math.abs(dx) > 2) {
+                aimAngle += dx * 0.007;
+                dragStartPos = { x: currentX, y: currentY };
+            }
+        });
+
+        window.addEventListener('pointerup', () => { isAimDragging = false; });
+
+        shootBtn.addEventListener('pointerdown', startHolding);
+        window.addEventListener('pointerup', stopHolding);
+
+        function executeShot() {
+            holeStrokes++;
+            hudStrokes.textContent = holeStrokes;
+            ball.isMoving = true;
+
+            const finalPower = Math.round(powerVal);
+            const powerRatio = finalPower / 100;
+            const speed = powerRatio * 21;
+
+            ball.vx = Math.cos(aimAngle) * speed;
+            ball.vy = Math.sin(aimAngle) * speed;
+
+            audio.playHit(powerRatio);
+
+            if (finalPower >= 95) {
+                appContainer.classList.add('shake');
+                setTimeout(() => appContainer.classList.remove('shake'), 300);
+            }
+
+            showFeedbackBanner(finalPower);
+            resetPowerMeter();
+        }
+
+        function showFeedbackBanner(power) {
+            let text = 'GREAT!';
+            let color = 'text-amber-300';
+
+            if (power >= 98) {
+                text = '100% MAXIMUM POWER!'; color = 'text-amber-400 font-black scale-110';
+            } else if (power >= 85) {
+                text = 'PERFECT!'; color = 'text-emerald-400';
+            } else if (power < 35) {
+                text = 'WEAK!'; color = 'text-blue-400';
+            }
+
+            feedbackText.textContent = text;
+            feedbackText.className = `font-game text-3xl font-black ${color} drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] tracking-wider uppercase popup-anim text-center whitespace-nowrap`;
+            feedbackBanner.classList.remove('hidden');
+            setTimeout(() => feedbackBanner.classList.add('hidden'), 1200);
+        }
+
+        function updatePhysics() {
+            if (isHolding) {
+                if (maxHoldPauseTimer > 0) {
+                    maxHoldPauseTimer--;
+                } else {
+                    powerVal += powerDirection * 2.2;
+
+                    if (powerVal >= 100) {
+                        powerVal = 100;
+                        powerDirection = -1;
+                        maxHoldPauseTimer = 10;
+                    } else if (powerVal <= 0) {
+                        powerVal = 0;
+                        powerDirection = 1;
+                        maxHoldPauseTimer = 6;
+                    }
+                }
+
+                const roundedPower = Math.round(powerVal);
+                powerBarFill.style.width = `${powerVal}%`;
+
+                if (roundedPower >= 98) {
+                    powerStatus.textContent = '🔥 100% MAX POWER!';
+                    powerStatus.className = 'text-amber-300 font-game uppercase tracking-wide text-base font-black animate-pulse';
+                    powerMeterTrack.classList.add('max-power-glow');
+                } else {
+                    powerStatus.textContent = `${roundedPower}% POWER`;
+                    powerStatus.className = 'text-amber-400 font-game uppercase tracking-wide text-sm font-extrabold';
+                    powerMeterTrack.classList.remove('max-power-glow');
+                }
+
+                if (Math.random() < 0.3) {
+                    audio.playWhir(roundedPower);
+                }
+            }
+
+            const holeData = HOLES[currentHoleIndex];
+
+            if (ball.isMoving && !ball.inHole) {
+                ball.trail.push({ x: ball.x, y: ball.y });
+                if (ball.trail.length > 12) ball.trail.shift();
+
+                let friction = 0.975;
+
+                for (let b of holeData.bunkers) {
+                    if (Math.hypot(ball.x - b.x, ball.y - b.y) < b.radius) {
+                        friction = 0.88;
+                        break;
+                    }
+                }
+
+                for (let w of holeData.water) {
+                    if (ball.x >= w.x && ball.x <= w.x + w.width &&
+                        ball.y >= w.y && ball.y <= w.y + w.height) {
+                        let onGreen = false;
+                        for (let g of holeData.greens) {
+                            if (Math.hypot(ball.x - g.x, ball.y - g.y) < g.radius) {
+                                onGreen = true; break;
+                            }
+                        }
+                        if (!onGreen) {
+                            audio.playSplash();
+                            ball.isMoving = false;
+                            setTimeout(() => {
+                                ball.x = holeData.start.x;
+                                ball.y = holeData.start.y;
+                                aimAngle = Math.atan2(holeData.hole.y - ball.y, holeData.hole.x - ball.x);
+                                resetPowerMeter();
+                            }, 500);
+                            return;
+                        }
+                    }
+                }
+
+                ball.x += ball.vx; ball.y += ball.vy;
+                ball.vx *= friction; ball.vy *= friction;
+
+                // Canvas boundaries
+                if (ball.x - ball.radius < 10) { ball.x = 10 + ball.radius; ball.vx *= -0.6; }
+                else if (ball.x + ball.radius > 390) { ball.x = 390 - ball.radius; ball.vx *= -0.6; }
+
+                const currentSpeed = Math.hypot(ball.vx, ball.vy);
+                const distToHole = Math.hypot(ball.x - holeData.hole.x, ball.y - holeData.hole.y);
+
+                if (distToHole < 15 && currentSpeed < 9.5) {
+                    ball.sinking = true; ball.vx = 0; ball.vy = 0;
+                    ball.x = holeData.hole.x; ball.y = holeData.hole.y;
+                }
+
+                if (currentSpeed < 0.15 && !ball.sinking) {
+                    ball.vx = 0; ball.vy = 0; ball.isMoving = false;
+                    resetPowerMeter();
+                }
+            }
+
+            if (ball.sinking) {
+                ball.scale -= 0.12;
+                if (ball.scale <= 0) {
+                    ball.scale = 0; ball.sinking = false; ball.inHole = true;
+                    onHoleCompleted();
+                }
+            }
+
+            let targetCameraY = ball.y - canvas.height * 0.55;
+            targetCameraY = Math.max(-100, Math.min(targetCameraY, 400));
+            cameraY += (targetCameraY - cameraY) * 0.1;
+        }
+
+        function onHoleCompleted() {
+            audio.playHoleDrop();
+            triggerConfetti();
+
+            const par = HOLES[currentHoleIndex].par;
+            const diff = holeStrokes - par;
+
+            let ratingStr = "PAR";
+            if (holeStrokes === 1) ratingStr = "HOLE IN ONE!";
+            else if (diff === -1) ratingStr = "BIRDIE!";
+            else if (diff === -2) ratingStr = "EAGLE!";
+            else if (diff === 0) ratingStr = "PAR";
+            else ratingStr = "BOGEY";
+
+            holeRatingBadge.textContent = `HOLE ${currentHoleIndex + 1} COMPLETE`;
+            holeRatingText.textContent = ratingStr;
+            overlayHoleStrokes.textContent = holeStrokes;
+            overlayHolePar.textContent = par;
+
+            totalStrokes += holeStrokes;
+            hudTotal.textContent = totalStrokes;
+
+            setTimeout(() => holeCompleteOverlay.classList.remove('hidden'), 500);
+        }
+
+        nextHoleBtn.addEventListener('click', () => {
+            if (currentHoleIndex + 1 < HOLES.length) loadHole(currentHoleIndex + 1);
+            else showEndGameModal();
+        });
+
+        function showEndGameModal() {
+            holeCompleteOverlay.classList.add('hidden');
+            endGameOverlay.classList.remove('hidden');
+
+            const totalPar = HOLES.reduce((a, b) => a + b.par, 0);
+            const diff = totalStrokes - totalPar;
+
+            finalTotalStrokes.textContent = totalStrokes;
+            finalScoreDiff.textContent = diff === 0 ? "Even Par (E)" : (diff > 0 ? `+${diff} Over Par` : `${diff} Under Par`);
+            finalRankBadge.textContent = diff <= -3 ? "S" : (diff <= 0 ? "A" : "B");
+        }
+
+        restartGameBtn.addEventListener('click', () => {
+            totalStrokes = 0; loadHole(0);
+        });
+
+        function triggerConfetti() {
+            confettiParticles = [];
+            const colors = ['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#fef08a'];
+            for (let i = 0; i < 70; i++) {
+                confettiParticles.push({
+                    x: confettiCanvas.width / 2, y: confettiCanvas.height / 2,
+                    vx: (Math.random() - 0.5) * 14, vy: (Math.random() - 0.7) * 16,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: Math.random() * 6 + 3, opacity: 1
+                });
+            }
+        }
+
+        function renderConfetti() {
+            cCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            for (let i = confettiParticles.length - 1; i >= 0; i--) {
+                const p = confettiParticles[i];
+                p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.opacity -= 0.02;
+                if (p.opacity <= 0) { confettiParticles.splice(i, 1); continue; }
+                cCtx.save();
+                cCtx.globalAlpha = p.opacity;
+                cCtx.fillStyle = p.color;
+                cCtx.beginPath();
+                cCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                cCtx.fill();
+                cCtx.restore();
+            }
+        }
+
+        function renderCourse() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(0, -cameraY);
+
+            // Base Grass
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(0, cameraY - 100, canvas.width, canvas.height + 300);
+
+            // UKM Lapang Sasar Golf Watermark
+            ctx.save();
+            ctx.translate(200, 420);
+            ctx.globalAlpha = 0.08;
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+
+            ctx.beginPath();
+            ctx.arc(0, -20, 110, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.font = '900 28px Outfit';
+            ctx.textAlign = 'center';
+            ctx.fillText('UKM GOLF', 0, -20);
+            ctx.font = '700 14px Outfit';
+            ctx.fillText('LAPANG SASAR GOLF', 0, 10);
+            ctx.restore();
+
+            const holeData = HOLES[currentHoleIndex];
+
+            // Water Hazards
+            for (let w of holeData.water) {
+                ctx.fillStyle = '#0284c7';
+                ctx.beginPath();
+                ctx.roundRect(w.x, w.y, w.width, w.height, w.radius || 10);
+                ctx.fill();
+            }
+
+            // Fairways
+            for (let f of holeData.fairways) {
+                ctx.fillStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.roundRect(f.x, f.y, f.width, f.height, f.radius || 25);
+                ctx.fill();
+            }
+
+            // Sand Bunkers
+            for (let b of holeData.bunkers) {
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Greens
+            for (let g of holeData.greens) {
+                ctx.fillStyle = '#4ade80';
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Hole & Flag
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(holeData.hole.x, holeData.hole.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(holeData.hole.x, holeData.hole.y);
+            ctx.lineTo(holeData.hole.x, holeData.hole.y - 30);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(holeData.hole.x, holeData.hole.y - 30);
+            ctx.lineTo(holeData.hole.x + 16, holeData.hole.y - 23);
+            ctx.lineTo(holeData.hole.x, holeData.hole.y - 16);
+            ctx.closePath();
+            ctx.fill();
+
+            // Aiming Guidance Indicator Line
+            if (!ball.isMoving && !ball.inHole) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(ball.x, ball.y);
+                ctx.lineTo(ball.x + Math.cos(aimAngle) * 85, ball.y + Math.sin(aimAngle) * 85);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Ball Motion Trail
+            if (ball.trail.length > 1) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(ball.trail[0].x, ball.trail[0].y);
+                for (let i = 1; i < ball.trail.length; i++) ctx.lineTo(ball.trail[i].x, ball.trail[i].y);
+                ctx.stroke();
+            }
+
+            // Golf Ball
+            if (!ball.inHole) {
+                ctx.save();
+                ctx.translate(ball.x, ball.y);
+                ctx.scale(ball.scale, ball.scale);
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Trees
+            for (let t of holeData.trees) {
+                ctx.fillStyle = '#14532d';
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            updatePhysics();
+            renderCourse();
+            renderConfetti();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function() {
+            loadHole(0);
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
